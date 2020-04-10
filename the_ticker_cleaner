@@ -1,0 +1,70 @@
+import pandas as pd
+from bs4 import BeautifulSoup
+import urllib.request as ur
+
+index = '' # Type index of US Public company
+
+def financial_statement_retreiver(index):
+    url_is = 'https://finance.yahoo.com/quote/' + index + '/financials?p=' + index
+    url_bs = 'https://finance.yahoo.com/quote/' + index + '/balance-sheet?p=' + index
+    url_cf = 'https://finance.yahoo.com/quote/' + index + '/cash-flow?p='+ index
+    
+    read_data_is = ur.urlopen(url_is).read() 
+    read_data_bs = ur.urlopen(url_bs).read() 
+    read_data_cf = ur.urlopen(url_cf).read() 
+    
+    soup_is= BeautifulSoup(read_data_is,'lxml')
+    soup_bs= BeautifulSoup(read_data_bs,'lxml')
+    soup_cf= BeautifulSoup(read_data_cf,'lxml')
+    
+    #Income Statement
+    ls_is = [] # Create empty list
+    for l in soup_is.find_all('div'): 
+      #Find all data structure that is ‘div’
+      ls_is.append(l.string) # add each element one by one to the list
+     
+    ls_is = [e for e in ls_is if e not in ('Operating Expenses','Non-recurring Events')] # Exclude those columns
+    new_ls = list(filter(None,ls_is))
+    new_ls = new_ls[12:]
+    is_data = list(zip(*[iter(new_ls)]*6))
+    Income_st = pd.DataFrame(is_data[0:])
+    Income_st.columns = Income_st.iloc[0]
+    Income_st = Income_st.drop(Income_st.index[0])
+    Income_st = Income_st.drop(['ttm'], axis = 1)
+    correct_order = ['Quarterly','12/31/2016','12/31/2017', '12/31/2018','12/31/2019']
+    Income_st = Income_st[correct_order]
+    Income_st = Income_st.set_index('Quarterly')
+    
+    #Balance Sheet
+    ls_bs = [] # Create empty list
+    for l in soup_bs.find_all('div'): 
+      ls_bs.append(l.string)
+    new_ls_bs = list(filter(None,ls_bs))
+    new_ls_bs = new_ls_bs[12:]
+    bs_data = list(zip(*[iter(new_ls_bs)]*5))
+    Balance_sheet = pd.DataFrame(bs_data[0:])
+    Balance_sheet.columns = Balance_sheet.iloc[0]
+    Balance_sheet = Balance_sheet.drop(Balance_sheet.index[0])
+    correct_order = ['Quarterly','12/31/2016','12/31/2017', '12/31/2018','12/31/2019']
+    Balance_sheet = Balance_sheet[correct_order]
+    Balance_sheet = Balance_sheet.set_index('Quarterly')
+    
+    
+    #Cash Flow
+    ls_cf = [] 
+    for l in soup_cf.find_all('div'): 
+      ls_cf.append(l.string)
+    new_ls_cf = list(filter(None,ls_cf))
+    new_ls_cf = new_ls_cf[12:]
+    cf_data = list(zip(*[iter(new_ls_cf)]*6))
+    Cash_flow = pd.DataFrame(cf_data[0:])
+    Cash_flow.columns = Cash_flow.iloc[0]
+    Cash_flow = Cash_flow.drop(Cash_flow.index[0])
+    Cash_flow = Cash_flow.drop(['ttm'], axis = 1)
+    correct_order = ['Quarterly','12/31/2016','12/31/2017', '12/31/2018','12/31/2019']
+    Cash_flow = Cash_flow[correct_order]
+    Cash_flow = Cash_flow.set_index('Quarterly')
+    
+    Income_st.to_csv(#Type Directory Here {}_income_statement.csv'.format(index))
+    Balance_sheet.to_csv(#Type Directory Here{}_balance_sheet.csv'.format(index))
+    Cash_flow.to_csv(#Type Directory Here{}_cash_flow.csv'.format(index))
